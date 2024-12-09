@@ -3,48 +3,71 @@ import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.sql.*;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.Vector;
 
 class Menu {
-    private String[] pizzaMenu = {"Cheese Burst Pizza", "Veggie Pizza", "Paneer Pizza", "Pepperoni Pizza"};
-    private double[] pizzaPrices = {250, 150, 200, 400};
-    private String[] toppingsMenu = {"Mushrooms", "Onions", "Bell Peppers", "Olives", "Bacon"};
-    private double[] toppingPrices = {20, 30, 25, 10, 50};
+    private Vector<String> pizzaMenu = new Vector<>();
+    private Vector<Double> pizzaPrices = new Vector<>();
+    private Vector<String> toppingsMenu = new Vector<>();
+    private Vector<Double> toppingPrices = new Vector<>();
 
-    public String[] getPizzaMenu() {
+    public Menu() {
+        pizzaMenu.add("Cheese Burst Pizza");
+        pizzaMenu.add("Veggie Pizza");
+        pizzaMenu.add("Paneer Pizza");
+        pizzaMenu.add("Pepperoni Pizza");
+
+        pizzaPrices.add(250.0);
+        pizzaPrices.add(150.0);
+        pizzaPrices.add(200.0);
+        pizzaPrices.add(400.0);
+
+        toppingsMenu.add("Mushrooms");
+        toppingsMenu.add("Onions");
+        toppingsMenu.add("Bell Peppers");
+        toppingsMenu.add("Olives");
+        toppingsMenu.add("Bacon");
+
+        toppingPrices.add(20.0);
+        toppingPrices.add(30.0);
+        toppingPrices.add(25.0);
+        toppingPrices.add(10.0);
+        toppingPrices.add(50.0);
+    }
+
+    public Vector<String> getPizzaMenu() {
         return pizzaMenu;
     }
 
     public double getPizzaPrice(int pizzaIndex) {
-        return pizzaPrices[pizzaIndex - 1];
+        return pizzaPrices.get(pizzaIndex - 1);
     }
 
-    public String[] getToppingsMenu() {
+    public Vector<String> getToppingsMenu() {
         return toppingsMenu;
     }
 
     public double getToppingPrice(int toppingIndex) {
-        return toppingPrices[toppingIndex - 1];
+        return toppingPrices.get(toppingIndex - 1);
     }
 }
 
 class OrderManager {
-    private List<String> orderedPizzas = new ArrayList<>();
-    private List<String> orderedSizes = new ArrayList<>();
-    private List<Integer> quantities = new ArrayList<>();
-    private List<List<String>> orderedToppings = new ArrayList<>();
-    private List<Double> orderPrices = new ArrayList<>();
+    private Vector<String> orderedPizzas = new Vector<>();
+    private Vector<String> orderedSizes = new Vector<>();
+    private Vector<Integer> quantities = new Vector<>();
+    private Vector<Vector<String>> orderedToppings = new Vector<>();
+    private Vector<Double> orderPrices = new Vector<>();
 
     public double processOrder(int pizzaChoice, String size, int quantity, Menu menu, JCheckBox[] toppingCheckBoxes) {
         double pizzaPrice = menu.getPizzaPrice(pizzaChoice);
         double totalPrice = pizzaPrice * quantity;
-        String pizzaName = menu.getPizzaMenu()[pizzaChoice - 1];
+        String pizzaName = menu.getPizzaMenu().get(pizzaChoice - 1);
 
-        List<String> toppings = new ArrayList<>();
+        Vector<String> toppings = new Vector<>();
         for (int i = 0; i < toppingCheckBoxes.length; i++) {
             if (toppingCheckBoxes[i].isSelected()) {
-                toppings.add(menu.getToppingsMenu()[i]);
+                toppings.add(menu.getToppingsMenu().get(i));
                 totalPrice += menu.getToppingPrice(i + 1) * quantity;
             }
         }
@@ -66,32 +89,57 @@ class OrderManager {
         return totalBill;
     }
 
-    public List<String> getOrderedPizzas() {
+    public Vector<String> getOrderedPizzas() {
         return orderedPizzas;
     }
 
-    public List<String> getOrderedSizes() {
+    public Vector<String> getOrderedSizes() {
         return orderedSizes;
     }
 
-    public List<Integer> getQuantities() {
+    public Vector<Integer> getQuantities() {
         return quantities;
     }
 
-    public List<List<String>> getOrderedToppings() {
+    public Vector<Vector<String>> getOrderedToppings() {
         return orderedToppings;
     }
 
-    public List<Double> getOrderPrices() {
+    public Vector<Double> getOrderPrices() {
         return orderPrices;
     }
 }
 
-public class PizzaShop18012V4 {
-    private static final String[] PIZZA_OPTIONS = {"Cheese Burst Pizza", "Veggie Pizza", "Paneer Pizza", "Pepperoni Pizza"};
-    private static final double[] PIZZA_PRICES = {250, 150, 200, 400};
-    private static final String[] TOPPING_OPTIONS = {"Mushrooms", "Onions", "Bell Peppers", "Olives", "Bacon"};
-    private static final double[] TOPPING_PRICES = {20, 30, 25, 10, 50};
+class DatabaseManager {
+    private static final String URL = "jdbc:mysql://localhost:3306/pizza_shop";
+    private static final String USER = "root";
+    private static final String PASSWORD = "";  
+
+    public static Connection getConnection() throws SQLException {
+        return DriverManager.getConnection(URL, USER, PASSWORD);
+    }
+
+    public static void saveOrder(String pizzaName, String size, int quantity, String toppings, double totalPrice, String customerName, String customerEmail, String customerPhone) {
+        try (Connection connection = getConnection()) {
+            String query = "INSERT INTO orders (pizza_name, size, quantity, toppings, total_price, customer_name, customer_email, customer_phone) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+            try (PreparedStatement statement = connection.prepareStatement(query)) {
+                statement.setString(1, pizzaName);
+                statement.setString(2, size);
+                statement.setInt(3, quantity);
+                statement.setString(4, toppings);
+                statement.setDouble(5, totalPrice);
+                statement.setString(6, customerName);
+                statement.setString(7, customerEmail);
+                statement.setString(8, customerPhone);
+                statement.executeUpdate();
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+}
+
+public class PizzaShop18028V4 {
 
     private JFrame frame;
     private JComboBox<String> pizzaMenu;
@@ -110,25 +158,20 @@ public class PizzaShop18012V4 {
     private JPanel customerDetailsPanel;
     private JPanel billPanel;
 
-    private Connection connection;
-    private PreparedStatement insertOrderStmt;
-
     private Menu menu;
     private OrderManager orderManager;
 
-    public PizzaShop18012V4() {
-        try {
-            connection = DriverManager.getConnection("jdbc:mysql://localhost:3306/pizza_shop", "root", "");
-            insertOrderStmt = connection.prepareStatement("INSERT INTO orders (pizza, size, quantity, toppings, total_price, customer_name, customer_email, customer_phone) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
-        } catch (SQLException e) {
-            e.printStackTrace();
-            JOptionPane.showMessageDialog(frame, "Database connection failed.", "Error", JOptionPane.ERROR_MESSAGE);
-            return;
-        }
+    private JTextField nameField;
+    private JTextField emailField;
+    private JTextField phoneField;
 
+    public PizzaShop18028V4() {
         menu = new Menu();
         orderManager = new OrderManager();
+        createGUI();
+    }
 
+    private void createGUI() {
         frame = new JFrame("Pizza Palace");
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.setLayout(new CardLayout());
@@ -161,7 +204,7 @@ public class PizzaShop18012V4 {
         gbc.gridy = 1;
         orderPanel.add(pizzaLabel, gbc);
 
-        pizzaMenu = new JComboBox<>(PIZZA_OPTIONS);
+        pizzaMenu = new JComboBox<>(menu.getPizzaMenu());
         gbc.gridx = 1;
         orderPanel.add(pizzaMenu, gbc);
 
@@ -191,9 +234,9 @@ public class PizzaShop18012V4 {
         gbc.gridy = 4;
         orderPanel.add(toppingsLabel, gbc);
 
-        toppingCheckBoxes = new JCheckBox[TOPPING_OPTIONS.length];
-        for (int i = 0; i < TOPPING_OPTIONS.length; i++) {
-            toppingCheckBoxes[i] = new JCheckBox(TOPPING_OPTIONS[i]);
+        toppingCheckBoxes = new JCheckBox[menu.getToppingsMenu().size()];
+        for (int i = 0; i < menu.getToppingsMenu().size(); i++) {
+            toppingCheckBoxes[i] = new JCheckBox(menu.getToppingsMenu().get(i));
             gbc.gridx = 1;
             gbc.gridy = 5 + i;
             orderPanel.add(toppingCheckBoxes[i], gbc);
@@ -210,14 +253,13 @@ public class PizzaShop18012V4 {
                 quantity = (int) quantitySpinner.getValue();
                 toppings = getSelectedToppings();
                 orderTotal = orderManager.processOrder(pizzaMenu.getSelectedIndex() + 1, size, quantity, menu, toppingCheckBoxes);
-
                 showCustomerDetailsScreen();
             }
         });
 
         gbc.gridwidth = 2;
         gbc.gridx = 0;
-        gbc.gridy = 10 + TOPPING_OPTIONS.length;
+        gbc.gridy = 10 + menu.getToppingsMenu().size();
         orderPanel.add(nextButton, gbc);
 
         frame.add(orderPanel, "Order");
@@ -237,7 +279,7 @@ public class PizzaShop18012V4 {
         gbc.gridy = 0;
         customerDetailsPanel.add(nameLabel, gbc);
 
-        JTextField nameField = new JTextField(20);
+        nameField = new JTextField(20);
         gbc.gridx = 1;
         customerDetailsPanel.add(nameField, gbc);
 
@@ -247,7 +289,7 @@ public class PizzaShop18012V4 {
         gbc.gridy = 1;
         customerDetailsPanel.add(emailLabel, gbc);
 
-        JTextField emailField = new JTextField(20);
+        emailField = new JTextField(20);
         gbc.gridx = 1;
         customerDetailsPanel.add(emailField, gbc);
 
@@ -257,72 +299,83 @@ public class PizzaShop18012V4 {
         gbc.gridy = 2;
         customerDetailsPanel.add(phoneLabel, gbc);
 
-        JTextField phoneField = new JTextField(20);
+        phoneField = new JTextField(20);
         gbc.gridx = 1;
         customerDetailsPanel.add(phoneField, gbc);
 
-        JButton confirmButton = new JButton("Confirm Order");
-        confirmButton.setFont(new Font("Arial", Font.PLAIN, 20));
-        confirmButton.setBackground(new Color(255, 165, 0));
-        confirmButton.setForeground(Color.WHITE);
-        confirmButton.addActionListener(new ActionListener() {
+        JButton submitButton = new JButton("Submit Order");
+        submitButton.setFont(new Font("Arial", Font.PLAIN, 20));
+        submitButton.setBackground(new Color(255, 165, 0));
+        submitButton.setForeground(Color.WHITE);
+        submitButton.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
-                String name = nameField.getText();
-                String email = emailField.getText();
-                String phone = phoneField.getText();
-
-                try {
-                    insertOrderStmt.setString(1, pizza);
-                    insertOrderStmt.setString(2, size);
-                    insertOrderStmt.setInt(3, quantity);
-                    insertOrderStmt.setString(4, toppings);
-                    insertOrderStmt.setDouble(5, orderTotal);
-                    insertOrderStmt.setString(6, name);
-                    insertOrderStmt.setString(7, email);
-                    insertOrderStmt.setString(8, phone);
-                    insertOrderStmt.executeUpdate();
-                } catch (SQLException ex) {
-                    ex.printStackTrace();
-                    JOptionPane.showMessageDialog(frame, "Error placing order.", "Error", JOptionPane.ERROR_MESSAGE);
+                if (validateCustomerDetails()) {
+                    
+                    DatabaseManager.saveOrder(pizza, size, quantity, toppings, orderTotal, nameField.getText(), emailField.getText(), phoneField.getText());
+                    showBillScreen();
+                } else {
+                    JOptionPane.showMessageDialog(frame, "Please fill out all customer details.", "Missing Information", JOptionPane.ERROR_MESSAGE);
                 }
-
-                showBillScreen();
             }
         });
 
         gbc.gridwidth = 2;
         gbc.gridx = 0;
-        gbc.gridy = 3;
-        customerDetailsPanel.add(confirmButton, gbc);
+        gbc.gridy = 4;
+        customerDetailsPanel.add(submitButton, gbc);
 
         frame.add(customerDetailsPanel, "CustomerDetails");
     }
 
     private void createBillScreen() {
-        billPanel = new JPanel();
+        billPanel = new JPanel(new BorderLayout());
         billPanel.setBackground(new Color(255, 250, 240));
-        billPanel.setLayout(new BoxLayout(billPanel, BoxLayout.Y_AXIS));
 
-        orderSummary = new JTextArea(10, 40);
+        orderSummary = new JTextArea();
+        orderSummary.setFont(new Font("Arial", Font.PLAIN, 20));
         orderSummary.setEditable(false);
-        orderSummary.setFont(new Font("Arial", Font.PLAIN, 18));
-
         JScrollPane scrollPane = new JScrollPane(orderSummary);
-        billPanel.add(scrollPane);
+        billPanel.add(scrollPane, BorderLayout.CENTER);
 
-        JButton backToOrderButton = new JButton("Back to Order");
-        backToOrderButton.setFont(new Font("Arial", Font.PLAIN, 20));
-        backToOrderButton.setBackground(new Color(255, 165, 0));
-        backToOrderButton.setForeground(Color.WHITE);
-        backToOrderButton.addActionListener(new ActionListener() {
+        JButton doneButton = new JButton("Done");
+        doneButton.setFont(new Font("Arial", Font.PLAIN, 20));
+        doneButton.setBackground(new Color(255, 165, 0));
+        doneButton.setForeground(Color.WHITE);
+        doneButton.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
-                showOrderScreen();
+                frame.dispose();
             }
         });
 
-        billPanel.add(backToOrderButton);
+        JPanel buttonPanel = new JPanel();
+        buttonPanel.add(doneButton);
+        billPanel.add(buttonPanel, BorderLayout.SOUTH);
 
         frame.add(billPanel, "Bill");
+    }
+
+    private void showCustomerDetailsScreen() {
+        CardLayout cardLayout = (CardLayout) frame.getContentPane().getLayout();
+        cardLayout.show(frame.getContentPane(), "CustomerDetails");
+    }
+
+    private void showBillScreen() {
+        StringBuilder bill = new StringBuilder();
+        bill.append("Pizza Order Summary:\n\n");
+        bill.append("Pizza: ").append(pizza).append("\n");
+        bill.append("Size: ").append(size).append("\n");
+        bill.append("Quantity: ").append(quantity).append("\n");
+        bill.append("Toppings: ").append(toppings).append("\n");
+        bill.append("Total: ₹").append(orderTotal).append("\n\n");
+        bill.append("Thank you for ordering from Pizza Palace!");
+        orderSummary.setText(bill.toString());
+
+        CardLayout cardLayout = (CardLayout) frame.getContentPane().getLayout();
+        cardLayout.show(frame.getContentPane(), "Bill");
+    }
+
+    private boolean validateCustomerDetails() {
+        return !nameField.getText().isEmpty() && !emailField.getText().isEmpty() && !phoneField.getText().isEmpty();
     }
 
     private String getSelectedToppings() {
@@ -332,34 +385,13 @@ public class PizzaShop18012V4 {
                 if (selectedToppings.length() > 0) {
                     selectedToppings.append(", ");
                 }
-                selectedToppings.append(TOPPING_OPTIONS[i]);
+                selectedToppings.append(menu.getToppingsMenu().get(i));
             }
         }
         return selectedToppings.toString();
     }
 
-    private void showCustomerDetailsScreen() {
-        CardLayout cl = (CardLayout) frame.getContentPane().getLayout();
-        cl.show(frame.getContentPane(), "CustomerDetails");
-    }
-
-    private void showOrderScreen() {
-        CardLayout cl = (CardLayout) frame.getContentPane().getLayout();
-        cl.show(frame.getContentPane(), "Order");
-    }
-
-    private void showBillScreen() {
-        orderSummary.setText("Order Summary:\n");
-        orderSummary.append("Pizza: " + pizza + " (" + size + ")\n");
-        orderSummary.append("Quantity: " + quantity + "\n");
-        orderSummary.append("Toppings: " + toppings + "\n");
-        orderSummary.append("Total Price: Rs." + orderTotal + "\n");
-
-        CardLayout cl = (CardLayout) frame.getContentPane().getLayout();
-        cl.show(frame.getContentPane(), "Bill");
-    }
-
     public static void main(String[] args) {
-        new PizzaShop18012V4();
+        new PizzaShop18028V4();
     }
 }
